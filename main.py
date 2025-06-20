@@ -16,10 +16,14 @@ from datetime import datetime
 from CTkMessagebox import CTkMessagebox
 from customtkinter import CTkInputDialog
 from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
 from PIL import Image, ImageTk, ImageDraw
-from PyQt5.QtCore import QUrl, Qt, QEvent
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile
+from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QApplication
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QIcon
+import sys
 
 # Directorios de recursos e imágenes
 main_dir = os.path.dirname(__file__)
@@ -57,7 +61,7 @@ database = read_config("DB_CONFIG")
 # Configuración de la base de datos
 db_host = database["host"]
 db_user = database["user"]
-db_password = "#upapSala7"
+db_password = ""
 db_name = database["database"]
 
 
@@ -75,6 +79,8 @@ current_register = 0
 MASTER_PASSWORD = "#upapSala7"
 
 # Configuración de correo, SMTP y contrasena
+# SMTP_SERVER = "http://mail.tecnolem.com:2079"  # Cambia esto por tu servidor SMTP
+# SMTP_PORT = 2079  # Usa 465 si quieres conexión SSL
 SMTP_SERVER = "mail.tecnolem.com"  # Cambia esto por tu servidor SMTP
 SMTP_PORT = 465  # Usa 465 si quieres conexión SSL
 EMAIL_SENDER = "noreply@tecnolem.com"  # Tu correo personal
@@ -92,6 +98,7 @@ class App(customtkinter.CTk):
         self.resizable(False, False)
         # Establecer el icono
         self.iconbitmap(os.path.join(img_dir, "ico.ico"))
+
         # Establecer el protocolo para cerrar la ventana
         # self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -176,7 +183,7 @@ class App(customtkinter.CTk):
         # 🔹 Título de bienvenida
         self.title_label = customtkinter.CTkLabel(
             self.form_frame,
-            text="Bienvenido a Sala de Informática",
+            text="Bienvenido a Sala de Informática I",
             font=("Arial", 30, "bold"),
         )
         self.title_label.pack(pady=30, padx=50)
@@ -282,6 +289,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="Por favor, completa todos los campos del formulario",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
             return
 
@@ -307,6 +319,11 @@ class App(customtkinter.CTk):
                     title="Error",
                     message="El correo no existe en la base de datos, por favor registrese en el sistema",
                     icon=error_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
                 )
                 return
 
@@ -317,6 +334,11 @@ class App(customtkinter.CTk):
                     title="Error",
                     message="El usuario ya ha iniciado sesión en otra computadora. Por favor cierre sesión en la otra computadora",
                     icon=error_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
                 )
                 return
 
@@ -390,6 +412,11 @@ class App(customtkinter.CTk):
                         title="Error",
                         message="Error al iniciar sesión",
                         icon=error_icon,
+                        icon_size=(80, 80),
+                        sound=True,
+                        font=("Arial", 14),
+                        wraplength=300,
+                        option_1="Aceptar",
                     )
 
                 update.close()
@@ -400,6 +427,11 @@ class App(customtkinter.CTk):
                     title="Error",
                     message="El correo o la contraseña son incorrectos, por favor inténtalo de nuevo",
                     icon=error_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
                 )
                 connection.close()
 
@@ -409,6 +441,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="Error al conectar con la base de datos: " + str(error),
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
     # 🔹 Resaltar borde del campo al enfocar
@@ -425,11 +462,14 @@ class App(customtkinter.CTk):
 
     # 🔹 Función para abrir la ventana de registro
     def registrarse(self):
+        print("Abriendo ventana de registro...")
         self.main_frame.place_forget()
 
         self.register_frame = customtkinter.CTkFrame(
             self, corner_radius=10, fg_color="transparent"
         )
+
+        print("Creando frame de registro...")
 
         self.register_frame.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -504,6 +544,8 @@ class App(customtkinter.CTk):
         self.email_entry_login.bind(
             "<FocusOut>", lambda event: self.start_fade(self.email_entry_login)
         )
+
+        print("Cargando carreras...")
 
         # obtener opciones de base de datos
         connection = MySQLdb.connect(
@@ -641,6 +683,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="Las contrasenas no coinciden, por favor, introduce las contrasenas correctas.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
             return
 
@@ -657,6 +704,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="Por favor, llena todos los campos. No deben estar vacios.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
             return
 
@@ -667,6 +719,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="El correo introducido es incorrecto, por favor, introduce un correo valido.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
             return
@@ -678,6 +735,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="La contrasena debe tener al menos 8 caracteres. Por favor, introduce una contrasena correcta.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
             return
@@ -718,6 +780,11 @@ class App(customtkinter.CTk):
                     title="Error",
                     message="El correo introducido ya esta registrado, por favor, introduce un correo diferente.",
                     icon=error_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
                 )
 
                 return
@@ -731,6 +798,11 @@ class App(customtkinter.CTk):
                 + str(e)
                 + ". Por favor, intenta de nuevo.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
             return
@@ -838,6 +910,11 @@ class App(customtkinter.CTk):
                 title="Correo enviado",
                 message="El correo de verificación ha sido enviado. Por favor, ingresa a tu correo institucional y revisa tu bandeja de entrada o spam.",
                 icon=ok_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
             self.validation_email_page()
@@ -854,6 +931,11 @@ class App(customtkinter.CTk):
                 + str(e)
                 + ". Por favor, intenta nuevamente.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
     # 🔹 Función para la pantalla de validación de correo
@@ -999,6 +1081,11 @@ class App(customtkinter.CTk):
                     title="Registrado",
                     message="El usuario ha sido registrado correctamente, puedes iniciar sesion ahora.",
                     icon=ok_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
                 )
 
                 # resetear variables globales
@@ -1017,6 +1104,11 @@ class App(customtkinter.CTk):
                     title="Error",
                     message="Error al conectar a la base de datos: " + str(err),
                     icon=error_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
                 )
                 # Mostrar mensaje de error
                 return
@@ -1029,6 +1121,11 @@ class App(customtkinter.CTk):
                 title="Registrado",
                 message="El usuario ha sido registrado correctamente, puedes iniciar sesion ahora.",
                 icon=ok_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
             self.validation_frame.place_forget()
@@ -1039,6 +1136,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="El codigo de validación es incorrecto. Por favor, intenta nuevamente.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
     # 📌 Botón de volver
@@ -1159,6 +1261,11 @@ class App(customtkinter.CTk):
                         title="Error",
                         message="El correo no esta registrado en la base de datos",
                         icon=error_icon,
+                        icon_size=(80, 80),
+                        sound=True,
+                        font=("Arial", 14),
+                        wraplength=300,
+                        option_1="Aceptar",
                     )
                     return
 
@@ -1266,7 +1373,11 @@ class App(customtkinter.CTk):
                 title="Recuperación de contraseña",
                 message="El correo de recuperación de contraseña ha sido enviado. Por favor, ingresa a tu correo institucional y revisa tu bandeja de entrada o spam.",
                 icon=ok_icon,
-                # option_2="Cancelar",
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
             self.open_check_code()
@@ -1280,6 +1391,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="Correo inválido. Por favor, introduce un correo institucional. Ejemplo: tu.nombre@upap.mx",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
     # 📌 Abre la ventana de comprobación de código
@@ -1387,6 +1503,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="El código de recuperación es incorrecto. Por favor, introduce el código correcto.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
     # 📌 Abre la ventana de cambio de contraseña
@@ -1491,6 +1612,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="Las contrasenas no coinciden. Por favor, introduce las contrasenas correctas.",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
             return
@@ -1521,6 +1647,11 @@ class App(customtkinter.CTk):
                         title="Información",
                         message="La contraseña ha sido cambiada con exito",
                         icon=ok_icon,
+                        icon_size=(80, 80),
+                        sound=True,
+                        font=("Arial", 14),
+                        wraplength=300,
+                        option_1="Aceptar",
                     )
 
                     # resetear variables globales
@@ -1545,6 +1676,11 @@ class App(customtkinter.CTk):
                     title="Error",
                     message="Ha ocurrido un error al cambiar la contraseña: " + str(e),
                     icon=error_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
                 )
                 return
         except Exception as e:
@@ -1553,6 +1689,11 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="Ha ocurrido un error al cambiar la contraseña: " + str(e),
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
             return
 
@@ -1604,9 +1745,17 @@ class App(customtkinter.CTk):
         msg["From"] = EMAIL_SENDER
         msg["To"] = to_email
         msg["Subject"] = subject
+        msg["Date"] = formatdate(localtime=True)
+        msg["Message-ID"] = make_msgid()
+        msg["MIME-Version"] = "1.0"
+        msg["X-Priority"] = "3"
+        msg["X-Mailer"] = "Python smtplib"
+        msg["Disposition-Notification-To"] = EMAIL_SENDER  # Opcional, confirma lectura
+
         msg.set_content(
             "Este correo contiene contenido HTML. Si no puedes verlo, habilita la visualización de HTML."
         )
+
         msg.add_alternative(html_body, subtype="html")  # Agregar contenido HTML
 
         try:
@@ -1621,7 +1770,7 @@ class App(customtkinter.CTk):
 
     def is_valid_email(self, email):
         """Verifica si el email tiene un formato válido."""
-        email_regex = r"^[a-zA-Z0-9_.+-]+@upap+\.[a-zA-Z0-9-.]+$"
+        email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
         return re.match(email_regex, email) is not None
 
     def generate_code(self):
@@ -1640,7 +1789,7 @@ class App(customtkinter.CTk):
 
     def on_leave_exit_button(self, event):
         self.exit_button.configure(fg_color="red")  # vuelve al color original
-        
+
     def emergency_exit(self):
         dialog = PasswordDialog(self, title="Contrasena Maestra")
         self.wait_window(dialog)
@@ -1652,14 +1801,18 @@ class App(customtkinter.CTk):
                     title="Cerrar App",
                     message="Desea cerrar la app?",
                     icon=ask_icon,
-                    option_1="Si",
-                    option_2="No",
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Sí, deseo cerrar",
+                    option_2="No, deseo continuar",
                 ).get()
 
                 # print(reply)
-                
-                if reply == "Si": 
-                    # print("App cerrada")   
+
+                if reply == "Si":
+                    # print("App cerrada")
                     self.destroy()
             else:
                 print("Contrasena incorrecta")
@@ -1667,7 +1820,12 @@ class App(customtkinter.CTk):
                     title="Error",
                     message="La contrasena maestra es incorrecta",
                     icon=error_icon,
-                ) 
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
+                )
 
         else:
             # si no se ingreso la contrasena maestra
@@ -1675,21 +1833,38 @@ class App(customtkinter.CTk):
                 title="Error",
                 message="No se ingreso la contrasena maestra",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
+
 class PasswordDialog(customtkinter.CTkToplevel):
-    def __init__(self, parent, title="Conaseña maestra", prompt="Por favor, ingresa la contraseña maestra:"):
+    def __init__(
+        self,
+        parent,
+        title="Conaseña maestra",
+        prompt="Por favor, ingresa la contraseña maestra:",
+    ):
         super().__init__(parent)
         self.title(title)
         self.geometry("300x150")
         self.resizable(False, False)
         self.grab_set()  # Bloquea la ventana principal
         # colocar la ventana en el centro de la pantalla
-        self.geometry("+%d+%d" % (parent.winfo_screenwidth() // 2 - 150, parent.winfo_screenheight() // 2 - 75))
-        
+        self.geometry(
+            "+%d+%d"
+            % (
+                parent.winfo_screenwidth() // 2 - 150,
+                parent.winfo_screenheight() // 2 - 75,
+            )
+        )
+
         # quitar encabezado
         # self.overrideredirect(True)
-        
+
         # colocar encima de otras ventanas
         self.attributes("-topmost", True)
 
@@ -1703,12 +1878,16 @@ class PasswordDialog(customtkinter.CTkToplevel):
 
         customtkinter.CTkLabel(self, text=prompt, font=("Arial", 14)).pack(pady=10)
 
-        self.entry = customtkinter.CTkEntry(self, font=("Arial", 14), show="*", width=200)
+        self.entry = customtkinter.CTkEntry(
+            self, font=("Arial", 14), show="*", width=200
+        )
         self.entry.pack(pady=5)
         self.entry.focus()
 
         self.result = None
-        btn = customtkinter.CTkButton(self, text="Aceptar", font=("Arial", 14, "bold"), command=self.submit)
+        btn = customtkinter.CTkButton(
+            self, text="Aceptar", font=("Arial", 14, "bold"), command=self.submit
+        )
         btn.pack(pady=10)
 
         self.bind("<Return>", lambda event: self.submit())  # Enter también valida
@@ -1717,50 +1896,85 @@ class PasswordDialog(customtkinter.CTkToplevel):
         self.result = self.entry.get()
         self.destroy()
 
+
 class RecoveryWindow(QMainWindow):
     def __init__(self):
-
         super().__init__()
+
         self.setWindowTitle("Recuperación de Contraseña")
         self.setGeometry(100, 100, 800, 600)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        # motrar por encima de otras ventanas
+        # self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setWindowIcon(QIcon(os.path.join(img_dir, "ico.ico")))
 
-        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        # Mantener siempre visible
+        self.setWindowTitle("Email - User Security UPAP")
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
 
-        # Crear un QWebEngineView para cargar la página con JavaScript
+        self.profile = QWebEngineProfile()
+        self.profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
+        self.profile.setPersistentCookiesPolicy(
+            QWebEngineProfile.PersistentCookiesPolicy.NoPersistentCookies
+        )
+        self.profile.setPersistentStoragePath("")  # Evita almacenar datos en disco
+
+        self.page = QWebEnginePage(self.profile)
+
         self.browser = QWebEngineView(self)
-        self.browser.setUrl(
-            QUrl(
-                "https://login.live.com/login.srf?wa=wsignin1.0&rpsnv=174&ct=1743026037&rver=7.5.2211.0&wp=MBI_SSL&wreply=https%3a%2f%2foutlook.live.com%2fowa%2f%3fnlp%3d1%26cobrandid%3dab0455a0-8d03-46b9-b18b-df2f57b9e44c%26culture%3des-bz%26country%3dbz%26RpsCsrfState%3da75ddc70-807c-89af-3cac-f20568bbd434&id=292841&aadredir=1&CBCXT=out&lw=1&fl=dob%2cflname%2cwld&cobrandid=ab0455a0-8d03-46b9-b18b-df2f57b9e44c"
-            )
-        )  # Cambia la URL
+        self.browser.setPage(self.page)
+        self.browser.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        self.browser.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-        # Crear un layout y agregar el navegador al layout
+        # self.browser.setUrl(
+        #     QUrl.fromUserInput(
+        #         "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com%2Fmail%2F%3Fhl%3Des-419&emr=1&hl=es-419&ifkv=AdBytiOLPsy-7YGdJ_I-x0nL6Pk4YMkuPAYnLTjtIggz30i6YRD2o15pIyuIBWJzOIL9FJxiBrxOCg&ltmpl=default&ltmplcache=2&osid=1&passive=true&rm=false&scc=1&service=mail&ss=1&flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S-1122280446%3A1750453691291371"
+        #     )
+        # )
+        self.browser.setUrl(
+            QUrl.fromUserInput(
+                "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https%3A%2F%2Foutlook.office.com%2F.default%20openid%20profile%20offline_access&redirect_uri=https%3A%2F%2Foutlook.office.com%2Fmail%2F&client-request-id=772a14d3-49f8-6927-96c0-ccac27fe332f&response_mode=fragment&client_info=1&prompt=select_account&nonce=01978ed0-7b20-7ddf-ac50-0c38c3b2ae82&state=eyJpZCI6IjAxOTc4ZWQwLTdiMjAtNzg0Zi1iMjI5LTUyNjI2ZTc1NTUwNCIsIm1ldGEiOnsiaW50ZXJhY3Rpb25UeXBlIjoicmVkaXJlY3QifX0%3D&claims=%7B%22access_token%22%3A%7B%22xms_cc%22%3A%7B%22values%22%3A%5B%22CP1%22%5D%7D%7D%7D&x-client-SKU=msal.js.browser&x-client-VER=4.12.0&response_type=code&code_challenge=Jiwwmy_4OrFVu2zKBpSeOs7qFtSbp0SVyz0ctCiN_eQ&code_challenge_method=S256"
+            )
+        )
+
         layout = QVBoxLayout()
         layout.addWidget(self.browser)
 
-        # Crear un widget central y asignarle el layout
         central_widget = QWidget(self)
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
+
+    def closeEvent(self, event):
+        self.browser.history().clear()
+        self.profile.clearHttpCache()
+        self.profile.cookieStore().deleteAllCookies()
+
+        self.browser.setPage(None)
+        self.page.deleteLater()
+        self.browser.deleteLater()
+        self.deleteLater()
+
+        event.accept()
 
 
 class counterUser(customtkinter.CTk):
     def __init__(self):
         super().__init__()
-        self.geometry("250x40")  # Ventana pequeña
+        self.geometry("325x40")  # Ventana pequeña
         self.title("User Security")
         self.resizable(False, False)
         self.attributes("-topmost", True)  # Mantener encima de otras ventanas
         # evitar redimensionar
-        self.resizable(False, False)
+        # self.resizable(0, 0)
         # Protocolo para cerrar la ventana
-        # self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # colocar inferior izquierda de la pantalla
         self.geometry("+%d+%d" % (0, self.winfo_screenheight() - 90))
 
         # quitar encabezado
-        self.overrideredirect(True)
+        self.overrideredirect(False)
 
         # configurar icono
         self.iconbitmap(os.path.join(img_dir, "ico.ico"))
@@ -1795,7 +2009,7 @@ class counterUser(customtkinter.CTk):
         # boton de cerrar con icono
         self.boton_cerrar = customtkinter.CTkButton(
             self.frame,
-            text="",
+            text="LogOut",
             command=self.cerrar_sesion,
             image=self.image,
             compound="left",
@@ -1818,7 +2032,7 @@ class counterUser(customtkinter.CTk):
 
         self.boton_reporte = customtkinter.CTkButton(
             self.frame,
-            text="",
+            text="Reporte",
             command=self.reportar,
             image=self.imagen_msg,
             compound="left",
@@ -1858,8 +2072,12 @@ class counterUser(customtkinter.CTk):
             title="Cerrar sesión",
             message="¿Estas seguro que deseas cerrar sesión?",
             icon=ask_icon,
-            option_1="Si",
-            option_2="No",
+            icon_size=(80, 80),
+            sound=True,
+            font=("Arial", 14),
+            wraplength=300,
+            option_1="Sí, cerrar sesión",
+            option_2="No, continuar sesión",
         ).get()
 
         if confirmar:
@@ -1896,6 +2114,7 @@ class counterUser(customtkinter.CTk):
 
                     # si se han actuializado correctamente
                     if actualizar.rowcount == 1 and act_cierre.rowcount == 1:
+                        print("Sesión cerrada correctamente")
                         self.destroy()
 
                         app_principal = App()
@@ -1919,6 +2138,9 @@ class counterUser(customtkinter.CTk):
         except Exception as e:
             print(f"Error al cargar la imagen: {e}")
             return None
+
+    def on_closing(self):
+        pass
 
 
 class Report(customtkinter.CTkToplevel):
@@ -2019,7 +2241,13 @@ class Report(customtkinter.CTkToplevel):
                 CTkMessagebox(
                     title="Reporte enviado",
                     message="Reporte enviado correctamente",
-                    icon="info",
+                    icon=ok_icon,
+                    icon_size=(80, 80),
+                    sound=True,
+                    font=("Arial", 14),
+                    wraplength=300,
+                    option_1="Aceptar",
+                    
                 )
 
             connection.close()
@@ -2030,7 +2258,12 @@ class Report(customtkinter.CTkToplevel):
             CTkMessagebox(
                 title="Error",
                 message="Error al enviar el reporte" + str(e),
-                icon="info",
+                icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
 
@@ -2161,6 +2394,11 @@ class FirstConfig(customtkinter.CTk):
                 title="Error",
                 message="Por favor, complete todos los campos",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
             return
 
@@ -2170,6 +2408,11 @@ class FirstConfig(customtkinter.CTk):
                 title="Error",
                 message="El numero de computadora debe ser un numero entero",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
             return
 
@@ -2179,6 +2422,11 @@ class FirstConfig(customtkinter.CTk):
                 title="Error",
                 message="La ip de la base de datos es invalida",
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
             return
 
@@ -2218,6 +2466,11 @@ class FirstConfig(customtkinter.CTk):
             #     title="Guardado",
             #     message="Configuracion guardada correctamente",
             #     icon=ok_icon,
+            #     icon_size=(80, 80),
+            #     sound=True,
+            #     font=("Arial", 14),
+            #     wraplength=300,
+            #     option_1="Aceptar",
             # )
 
             self.destroy()
@@ -2229,6 +2482,11 @@ class FirstConfig(customtkinter.CTk):
                 title="Error",
                 message="Error al guardar la configuración: " + str(e),
                 icon=error_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
             )
 
     def validate_ip(self, ip_address):
