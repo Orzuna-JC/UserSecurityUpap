@@ -61,7 +61,7 @@ database = read_config("DB_CONFIG")
 # Configuración de la base de datos
 db_host = database["host"]
 db_user = database["user"]
-db_password = ""
+db_password = "#upapSala7"
 db_name = database["database"]
 
 
