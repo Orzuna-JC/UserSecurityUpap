@@ -26,7 +26,7 @@ from PyQt6.QtGui import QIcon
 import sys
 
 # Directorios de recursos e imágenes
-main_dir = os.path.dirname(__file__)
+main_dir = os.path.dirname(os.path.abspath(__file__))
 resource_dir = os.path.join(main_dir, "assets")
 img_dir = os.path.join(resource_dir, "img")
 config_dir = os.path.join(resource_dir, "config")
@@ -56,13 +56,11 @@ off_icon = os.path.join(img_dir, "off-ico.png")
 ok_icon = os.path.join(img_dir, "ok-ico.png")
 ask_icon = os.path.join(img_dir, "ask-ico.png")
 
-database = read_config("DB_CONFIG")
-
 # Configuración de la base de datos
-db_host = database["host"]
-db_user = database["user"]
+db_host = "31.22.4.234"
+db_user = "tecnolem_upapadmin"
 db_password = "#upapSala7"
-db_name = database["database"]
+db_name = "tecnolem_upapinfo"
 
 
 # configuración de global_code, una cadena de caracteres aleatorios
@@ -88,6 +86,23 @@ EMAIL_PASSWORD = "#upapSala7"  # La contraseña de tu correo
 
 
 class App(customtkinter.CTk):
+    def db_connect(self):
+        return MySQLdb.connect(
+            host=db_host,
+            port=3306,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+        )
+
+    def start_loading(self):
+        self.config(cursor="watch")
+        self.update()
+
+    def stop_loading(self):
+        self.config(cursor="")
+        self.update()
+
     def __init__(self):
         super().__init__()
 
@@ -279,6 +294,10 @@ class App(customtkinter.CTk):
         self.register_button.pack(pady=(0, 20))
 
     def login(self):
+        threading.Thread(target=self._login_process, daemon=True).start()
+
+    def _login_process(self):
+        self.after(0, self.start_loading)
         # print("Iniciando sesión...")
         email = self.email_entry_login.get()
         password = self.password_entry_login.get()
@@ -295,16 +314,11 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
+            self.after(0, self.stop_loading)
             return
 
         try:
-            connection = MySQLdb.connect(
-                host=db_host,
-                port=3306,
-                user=db_user,
-                password=db_password,
-                database=db_name,
-            )
+            connection = self.db_connect()
 
             check_email = connection.cursor()
             query = "SELECT * FROM users WHERE email = %s"
@@ -312,7 +326,7 @@ class App(customtkinter.CTk):
             user = check_email.fetchone()
             check_email.close()
 
-            print(user)
+            # print(user)
 
             if user is None:
                 CTkMessagebox(
@@ -325,6 +339,7 @@ class App(customtkinter.CTk):
                     wraplength=300,
                     option_1="Aceptar",
                 )
+                self.after(0, self.stop_loading)
                 return
 
             # Verificar si el correo esta activo en otra computadora
@@ -340,9 +355,10 @@ class App(customtkinter.CTk):
                     wraplength=300,
                     option_1="Aceptar",
                 )
+                self.after(0, self.stop_loading)
                 return
 
-            print("no ha iniciado sesion en otra computadora")
+            # print("no ha iniciado sesion en otra computadora")
 
             cursor = connection.cursor()
             query = (
@@ -352,7 +368,7 @@ class App(customtkinter.CTk):
             user = cursor.fetchone()
             cursor.close()
 
-            print("comfirmado usuario y contrasena")
+            # print("comfirmado usuario y contrasena")
 
             if user:
                 update = connection.cursor()
@@ -360,7 +376,7 @@ class App(customtkinter.CTk):
                 update.execute(query, (email,))
                 connection.commit()
 
-                print("actualizado status")
+                # print("actualizado status")
 
                 if update.rowcount > 0:
 
@@ -370,7 +386,7 @@ class App(customtkinter.CTk):
                     connection.commit()
                     register.close()
 
-                    print("registrado sesion")
+                    # print("registrado sesion")
 
                     if register.rowcount > 0:
                         global current_register
@@ -380,7 +396,7 @@ class App(customtkinter.CTk):
                         correo = user[2]
                         id = user[0]
 
-                        print("sesion registrada")
+                        # print("sesion registrada")
 
                         # if self.web_view is not None:  # Verifica si la ventana existe
                         #     try:
@@ -402,10 +418,8 @@ class App(customtkinter.CTk):
 
                         print("mensaje de inicio de sesion")
 
-                        self.destroy()
-
-                        contador_app = counterUser()
-                        contador_app.mainloop()
+                        self.after(0, self.stop_loading)
+                        self.after(0, self.cerrar_y_abrir_contador)
 
                 else:
                     CTkMessagebox(
@@ -448,6 +462,20 @@ class App(customtkinter.CTk):
                 option_1="Aceptar",
             )
 
+        self.after(0, self.stop_loading)
+
+    def cerrar_y_abrir_contador(self):
+        self.destroy()
+        contador_app = counterUser()
+        contador_app.mainloop()
+        # contador_app.protocol(
+        #     "WM_DELETE_WINDOW", lambda: self.volver_a_principal(contador_app)
+        # )
+
+    def volver_a_principal(self, child_window):
+        child_window.destroy()
+        self.deiconify()
+    
     # 🔹 Resaltar borde del campo al enfocar
     def start_glow(self, widget):
         widget.configure(border_color="#1F6AA5")
@@ -462,14 +490,14 @@ class App(customtkinter.CTk):
 
     # 🔹 Función para abrir la ventana de registro
     def registrarse(self):
-        print("Abriendo ventana de registro...")
+        # print("Abriendo ventana de registro...")
         self.main_frame.place_forget()
 
         self.register_frame = customtkinter.CTkFrame(
             self, corner_radius=10, fg_color="transparent"
         )
 
-        print("Creando frame de registro...")
+        # print("Creando frame de registro...")
 
         self.register_frame.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -545,16 +573,10 @@ class App(customtkinter.CTk):
             "<FocusOut>", lambda event: self.start_fade(self.email_entry_login)
         )
 
-        print("Cargando carreras...")
+        # print("Cargando carreras...")
 
         # obtener opciones de base de datos
-        connection = MySQLdb.connect(
-            host=db_host,
-            port=3306,
-            user=db_user,
-            password=db_password,
-            database=db_name,
-        )
+        connection = self.db_connect()
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM careers")
         careers = cursor.fetchall()
@@ -647,8 +669,13 @@ class App(customtkinter.CTk):
         )
         self.register_button.pack(pady=(0, 20))
 
-    # 🔹 Función de registro
+    # 🔹
     def register_user(self):
+        threading.Thread(target=self._register_process, daemon=True).start()
+
+    # 🔹 Función de registro
+    def _register_process(self):
+        self.after(0, self.start_loading)
 
         global nombre_completo
         global correo
@@ -659,13 +686,7 @@ class App(customtkinter.CTk):
         correo = self.email_entry_login.get()
 
         # carrera
-        connection = MySQLdb.connect(
-            host=db_host,
-            port=3306,
-            user=db_user,
-            password=db_password,
-            database=db_name,
-        )
+        connection = self.db_connect()
         cursor = connection.cursor()
         query = "SELECT id FROM careers WHERE name = %s"
         cursor.execute(query, (self.carrera_select.get(),))
@@ -689,6 +710,7 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
+            self.after(0, self.stop_loading)
             return
 
         # Validaciones de campos
@@ -710,6 +732,7 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
+            self.after(0, self.stop_loading)
             return
 
         # Validaciones de campos
@@ -725,7 +748,7 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
-
+            self.after(0, self.stop_loading)
             return
 
         # Validaciones de campos, longitud de contrasena
@@ -741,25 +764,18 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
-
+            self.after(0, self.stop_loading)
             return
 
         try:
             # Conectar a la base de datos
-            db_connection = MySQLdb.connect(
-                host=db_host,
-                port=3306,
-                user=db_user,
-                passwd=db_password,
-                database=db_name,
-                # connect_timeout=10,
-            )
+            connection = self.db_connect()
 
             # Verificar la conexión
-            print("Conexión exitosa a la base de datos")
+            # print("Conexión exitosa a la base de datos")
 
             # Crear el cursor
-            db_cursor = db_connection.cursor()
+            db_cursor = connection.cursor()
 
             # Ejecutar la consulta SQL
             db_cursor.execute("SELECT * FROM users WHERE email = %s", (correo,))
@@ -771,7 +787,7 @@ class App(customtkinter.CTk):
             db_cursor.close()
 
             # Cerrar la conexión a la base de datos
-            db_connection.close()
+            connection.close()
 
             # Verificar si el correo ya existe en la base de datos
             if result is not None:
@@ -786,11 +802,11 @@ class App(customtkinter.CTk):
                     wraplength=300,
                     option_1="Aceptar",
                 )
-
+                self.after(0, self.stop_loading)
                 return
 
         except MySQLdb.Error as e:
-            print(f"Error al conectar a la base de datos: {e}")
+            # print(f"Error al conectar a la base de datos: {e}")
 
             CTkMessagebox(
                 title="Error",
@@ -804,7 +820,7 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
-
+            self.after(0, self.stop_loading)
             return
 
         # mandar correo con el codigo de recuperacion
@@ -923,7 +939,7 @@ class App(customtkinter.CTk):
             self.web_view.show()
 
         except Exception as e:
-            print(f"Error al enviar el correo: {e}")
+            # print(f"Error al enviar el correo: {e}")
 
             CTkMessagebox(
                 title="Error",
@@ -937,6 +953,8 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
+
+        self.after(0, self.stop_loading)
 
     # 🔹 Función para la pantalla de validación de correo
     def validation_email_page(self):
@@ -1034,10 +1052,15 @@ class App(customtkinter.CTk):
         )
         self.back_button.pack(pady=(0, 20))
 
-    # 🔹 Función para comprobar el codigo
+    # 🔹
     def val_code_register(self):
+        threading.Thread(target=self._val_code_process, daemon=True).start()
 
-        print("Aqui estoy")
+    # 🔹 Función para comprobar el codigo
+    def _val_code_process(self):
+        self.after(0, self.start_loading)
+
+        # print("Aqui estoy")
 
         global global_code
         global nombre_completo
@@ -1047,25 +1070,18 @@ class App(customtkinter.CTk):
 
         if self.code_entry_validation.get() == global_code:
 
-            print("Aqui estoy 2")
+            # print("Aqui estoy 2")
 
             # Conectar a la base de datos
             try:
                 # Conectar a la base de datos
-                db_connection = MySQLdb.connect(
-                    host=db_host,
-                    port=3306,
-                    user=db_user,
-                    passwd=db_password,
-                    database=db_name,
-                    # connect_timeout=10,
-                )
+                connection = self.db_connect()
 
                 # Verificar la conexión
-                print("Conexión exitosa a la base de datos")
+                # print("Conexión exitosa a la base de datos")
 
                 # Crear el cursor
-                cursor = db_connection.cursor()
+                cursor = connection.cursor()
 
                 # Ejecutar la consulta
                 cursor.execute(
@@ -1074,7 +1090,7 @@ class App(customtkinter.CTk):
                 )
 
                 # Confirmar la transacción
-                db_connection.commit()
+                connection.commit()
 
                 # Mostrar mensaje de registro exitoso
                 CTkMessagebox(
@@ -1099,7 +1115,7 @@ class App(customtkinter.CTk):
                 cursor.close()
 
             except MySQLdb.Error as err:
-                print(f"Error al conectar a la base de datos: {err}")
+                # print(f"Error al conectar a la base de datos: {err}")
                 CTkMessagebox(
                     title="Error",
                     message="Error al conectar a la base de datos: " + str(err),
@@ -1111,11 +1127,12 @@ class App(customtkinter.CTk):
                     option_1="Aceptar",
                 )
                 # Mostrar mensaje de error
+                self.after(0, self.stop_loading)
                 return
 
             finally:
                 # cerrar la conexión
-                db_connection.close()
+                connection.close()
 
             CTkMessagebox(
                 title="Registrado",
@@ -1142,6 +1159,8 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
+
+        self.after(0, self.stop_loading)
 
     # 📌 Botón de volver
     def volver_validation(self):
@@ -1234,20 +1253,20 @@ class App(customtkinter.CTk):
         )
         self.back_button.pack(pady=(0, 20))
 
-    # 📌 Abre la ventana de recuperación
+    # 📌 n
     def open_recovery_page(self):
+        threading.Thread(target=self._recovery_process, daemon=True).start()
+
+    # 📌 Abre la ventana de recuperación
+    def _recovery_process(self):
+        self.after(0, self.start_loading)
+
         global correo
         correo = self.email_entry_login.get()
         if self.is_valid_email(correo):
 
             try:
-                connection = MySQLdb.connect(
-                    host=db_host,
-                    port=3306,
-                    user=db_user,
-                    password=db_password,
-                    database=db_name,
-                )
+                connection = self.db_connect()
                 cursor = connection.cursor()
                 query = "SELECT * FROM users WHERE email = %s"
                 cursor.execute(query, (correo,))
@@ -1267,6 +1286,7 @@ class App(customtkinter.CTk):
                         wraplength=300,
                         option_1="Aceptar",
                     )
+                    self.after(0, self.stop_loading)
                     return
 
             except MySQLdb.Error as err:
@@ -1386,7 +1406,6 @@ class App(customtkinter.CTk):
             self.web_view.show()
 
         else:
-
             CTkMessagebox(
                 title="Error",
                 message="Correo inválido. Por favor, introduce un correo institucional. Ejemplo: tu.nombre@upap.mx",
@@ -1398,11 +1417,13 @@ class App(customtkinter.CTk):
                 option_1="Aceptar",
             )
 
+        self.after(0, self.stop_loading)
+
     # 📌 Abre la ventana de comprobación de código
     def open_check_code(self):
         global global_code
 
-        print(f"\n\nCodigo: " + global_code + "\n\n")
+        # print(f"\n\nCodigo: " + global_code + "\n\n")
 
         self.recovery_frame.place_forget()
 
@@ -1603,7 +1624,13 @@ class App(customtkinter.CTk):
         self.change_password_frame.place_forget()
         self.main_frame.place(relx=0.5, rely=0.5, anchor="center")
 
+    # 📌 o
     def change_password(self):
+        threading.Thread(target=self._change_password_process, daemon=True).start()
+
+    # 📌 Cambia la contraseña
+    def _change_password_process(self):
+        self.after(0, self.start_loading)
         new_password = self.change_password_entry.get()
         confirm_password = self.change_password_confirm_entry.get()
         if new_password != confirm_password:
@@ -1619,6 +1646,7 @@ class App(customtkinter.CTk):
                 option_1="Aceptar",
             )
 
+            self.after(0, self.stop_loading)
             return
         print(new_password)
 
@@ -1671,7 +1699,7 @@ class App(customtkinter.CTk):
                     self.main_frame.place(relx=0.5, rely=0.5, anchor="center")
 
             except Exception as e:
-                print(e)
+                # print(e)
                 CTkMessagebox(
                     title="Error",
                     message="Ha ocurrido un error al cambiar la contraseña: " + str(e),
@@ -1682,9 +1710,10 @@ class App(customtkinter.CTk):
                     wraplength=300,
                     option_1="Aceptar",
                 )
+                self.after(0, self.stop_loading)
                 return
         except Exception as e:
-            print(e)
+            # print(e)
             CTkMessagebox(
                 title="Error",
                 message="Ha ocurrido un error al cambiar la contraseña: " + str(e),
@@ -1695,7 +1724,10 @@ class App(customtkinter.CTk):
                 wraplength=300,
                 option_1="Aceptar",
             )
+            self.after(0, self.stop_loading)
             return
+
+        self.after(0, self.stop_loading)
 
         self.volver_change_password()
 
@@ -1759,12 +1791,12 @@ class App(customtkinter.CTk):
         msg.add_alternative(html_body, subtype="html")  # Agregar contenido HTML
 
         try:
-            print(f" **** Enviando correo a: {to_email}")
+            # print(f" **** Enviando correo a: {to_email}")
             with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-                print(f" **** Conectando al servidor SMTP")
+                # print(f" **** Conectando al servidor SMTP")
                 server.login(EMAIL_SENDER, EMAIL_PASSWORD)  # Iniciar sesión
                 server.send_message(msg)  # Enviar mensaje
-            print(f" **** Correo enviado exitosamente")
+            # print(f" **** Correo enviado exitosamente")
         except Exception as e:
             print(f" **** Error al enviar correo: {e}")
 
@@ -1806,7 +1838,7 @@ class App(customtkinter.CTk):
                     font=("Arial", 14),
                     wraplength=300,
                     option_1="Sí, deseo cerrar",
-                    option_2="No, deseo continuar",
+                    option_2="Cancelar",
                 ).get()
 
                 # print(reply)
@@ -1815,7 +1847,7 @@ class App(customtkinter.CTk):
                     # print("App cerrada")
                     self.destroy()
             else:
-                print("Contrasena incorrecta")
+                # print("Contrasena incorrecta")
                 CTkMessagebox(
                     title="Error",
                     message="La contrasena maestra es incorrecta",
@@ -1959,12 +1991,23 @@ class RecoveryWindow(QMainWindow):
 
 
 class counterUser(customtkinter.CTk):
+    def db_connect(self):
+        return MySQLdb.connect(
+            host=db_host,
+            port=3306,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+        )
+
     def __init__(self):
         super().__init__()
+        print("Iniciando ventana de contador de usuario")
         self.geometry("325x40")  # Ventana pequeña
         self.title("User Security")
         self.resizable(False, False)
         self.attributes("-topmost", True)  # Mantener encima de otras ventanas
+        print("Ventana de contador de usuario iniciada")
         # evitar redimensionar
         # self.resizable(0, 0)
         # Protocolo para cerrar la ventana
@@ -2009,7 +2052,7 @@ class counterUser(customtkinter.CTk):
         # boton de cerrar con icono
         self.boton_cerrar = customtkinter.CTkButton(
             self.frame,
-            text="LogOut",
+            text="Salir",
             command=self.cerrar_sesion,
             image=self.image,
             compound="left",
@@ -2047,20 +2090,24 @@ class counterUser(customtkinter.CTk):
     def reportar(self):
         # Abrir la ventana de reporte
         report = Report()
-        report.mainloop()
+        report.protocol("WM_DELETE_WINDOW", lambda: self.volver_a_principal(counterUser))
+        
+    def volver_a_principal(self, child_window):
+        child_window.destroy()
+        self.deiconify()
 
     def update_timer(self):
-        hours = self.counter // 3600  # Obtiene las horas
-        minutes = (self.counter % 3600) // 60  # Obtiene los minutos
-        seconds = self.counter % 60  # Obtiene los segundos
+        hours = self.counter // 3600
+        minutes = (self.counter % 3600) // 60
+        seconds = self.counter % 60
 
-        # Formatear como "HH:MM:SS"
-        time_str = f"{hours:02}:{minutes:02}.{seconds:02}"
-
-        # Actualizar la etiqueta
+        time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
         self.label.configure(text=f"Tiempo: {time_str}")
 
-        # Incrementar el contador y llamar de nuevo en 1 segundo
+        # Cada 10 segundos lanza consulta en un hilo
+        if self.counter % 10 == 0:
+            threading.Thread(target=self.check_session_status, daemon=True).start()
+
         self.counter += 1
         self.after(1000, self.update_timer)
 
@@ -2077,21 +2124,17 @@ class counterUser(customtkinter.CTk):
             font=("Arial", 14),
             wraplength=300,
             option_1="Sí, cerrar sesión",
-            option_2="No, continuar sesión",
+            option_2="Cancelar",
         ).get()
 
         if confirmar:
+
             global correo
             global current_register
+            
             try:
                 # configura base de datos
-                connection = MySQLdb.connect(
-                    host=db_host,
-                    port=3306,
-                    user=db_user,
-                    password=db_password,
-                    database=db_name,
-                )
+                connection = self.db_connect()
 
                 # actualizar base de datos
                 actualizar = connection.cursor()
@@ -2101,8 +2144,8 @@ class counterUser(customtkinter.CTk):
                 actualizar.close()
                 # connection.close()
 
-                print(current_register)
-                print(datetime.now())
+                # print(current_register)
+                # print(datetime.now())
 
                 # actualizar fecha de ciererre de sesion
                 act_cierre = connection.cursor()
@@ -2114,7 +2157,7 @@ class counterUser(customtkinter.CTk):
 
                     # si se han actuializado correctamente
                     if actualizar.rowcount == 1 and act_cierre.rowcount == 1:
-                        print("Sesión cerrada correctamente")
+                        # print("Sesión cerrada correctamente")
                         self.destroy()
 
                         app_principal = App()
@@ -2141,9 +2184,70 @@ class counterUser(customtkinter.CTk):
 
     def on_closing(self):
         pass
+    
+    def check_session_status(self):
+        try:
+            connection = self.db_connect()
+            cursor = connection.cursor()
+            
+            global current_register
+
+            # Ajusta esto: debes tener el id de la sesión actual en self.session_id
+            query = "SELECT end_time FROM sessions WHERE id = %s"
+            cursor.execute(query, (current_register,))
+            result = cursor.fetchone()
+
+            if result and result[0] is not None:
+                # La sesión se cerró, ejecutamos la función correspondiente
+                self.after(0, self.sesion_cerrada)
+
+            cursor.close()
+            connection.close()
+
+        except Exception as e:
+            print(f"Error al consultar la sesión: {e}")
+    
+    def sesion_cerrada(self):
+        try:
+            # Mostrar mensaje y esperar respuesta
+            respuesta = CTkMessagebox(
+                title="Sesión cerrada",
+                message="Tu sesión ha sido cerrada por el administrador.",
+                icon=ok_icon,
+                icon_size=(80, 80),
+                sound=True,
+                font=("Arial", 14),
+                wraplength=300,
+                option_1="Aceptar",
+            ).get()
+
+            if respuesta == "Aceptar":
+                self.destroy()
+
+                # Reabrir la app principal sin ejecutar mainloop de nuevo
+                self.after(0, self.reabrir_app)
+
+        except Exception as e:
+            print(f"Error al cerrar la sesión: {e}")
+            
+            
+            
+    def reabrir_app(self):
+        app_principal = App()
+        app_principal.mainloop()
+                    
 
 
 class Report(customtkinter.CTkToplevel):
+    def db_connect(self):
+        return MySQLdb.connect(
+            host=db_host,
+            port=3306,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+        )
+
     def __init__(self):
         super().__init__()
         self.title("Reporte")
@@ -2215,13 +2319,7 @@ class Report(customtkinter.CTkToplevel):
         # enviar reporte
         try:
             # configura base de datos
-            connection = MySQLdb.connect(
-                host=db_host,
-                port=3306,
-                user=db_user,
-                password=db_password,
-                database=db_name,
-            )
+            connection = self.db_connect()
 
             # registrar reporte
             global id
@@ -2247,14 +2345,13 @@ class Report(customtkinter.CTkToplevel):
                     font=("Arial", 14),
                     wraplength=300,
                     option_1="Aceptar",
-                    
                 )
 
             connection.close()
 
             self.destroy()
         except Exception as e:
-            print(f"Error al enviar el reporte: {e}")
+            # print(f"Error al enviar el reporte: {e}")
             CTkMessagebox(
                 title="Error",
                 message="Error al enviar el reporte" + str(e),
@@ -2340,16 +2437,16 @@ class FirstConfig(customtkinter.CTk):
         self.entry.place(relx=0.5, rely=0.5, anchor="center")
         self.entry.pack(side="top", pady=10)
 
-        # crear input de ip de la base de datos
-        self.entry_ip = customtkinter.CTkEntry(
-            self.main_frame,
-            font=("Arial", 14),
-            placeholder_text="IP de la base de datos",
-            width=300,
-            height=40,
-            corner_radius=10,
-        )
-        self.entry_ip.pack(side="top", pady=10)
+        # # crear input de ip de la base de datos
+        # self.entry_ip = customtkinter.CTkEntry(
+        #     self.main_frame,
+        #     font=("Arial", 14),
+        #     placeholder_text="IP de la base de datos",
+        #     width=300,
+        #     height=40,
+        #     corner_radius=10,
+        # )
+        # self.entry_ip.pack(side="top", pady=10)
 
         # frame de botones
         self.boton_frame = customtkinter.CTkFrame(
